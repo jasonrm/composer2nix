@@ -1,6 +1,6 @@
 # This file originates from composer2nix
 
-{ stdenv, writeTextFile, fetchurl, php, unzip, phpPackages }:
+{ stdenv, makeScriptWriter, fetchurl, php, unzip, phpPackages }:
 
 let
   inherit (phpPackages) composer;
@@ -16,6 +16,8 @@ let
         mv * $out
       '';
     };
+
+  writePhp = makeScriptWriter { interpreter = "${php}/bin/php"; };
 
   buildPackage =
     { name
@@ -33,11 +35,7 @@ let
     , ...}@args:
 
     let
-      reconstructInstalled = writeTextFile {
-        name = "reconstructinstalled.php";
-        executable = true;
-        text = ''
-          #! ${php}/bin/php
+      reconstructInstalled = writePhp "reconstructinstalled.php" ''
           <?php
           if(file_exists($argv[1]))
           {
@@ -68,15 +66,9 @@ let
           }
           else
               print("[]");
-          ?>
         '';
-      };
 
-      constructBin = writeTextFile {
-        name = "constructbin.php";
-        executable = true;
-        text = ''
-          #! ${php}/bin/php
+      constructBin = writePhp "constructbin.php" ''
           <?php
           $composerJSONStr = file_get_contents($argv[1]);
 
@@ -103,9 +95,7 @@ let
                       symlink("../../".$bin, "vendor/".$binDir."/".basename($bin));
               }
           }
-          ?>
         '';
-      };
 
       bundleDependencies = dependencies:
         stdenv.lib.concatMapStrings (dependencyName:
